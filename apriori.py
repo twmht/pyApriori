@@ -43,7 +43,7 @@ def returnItemsWithMinSupport(itemSet, transactionList, minSupport, freqSet):
 
 def joinSet(itemSet,length):
     """Join a set with itself and returns the n-element itemsets"""
-    return set([i.union(j) for i in itemSet for j in itemSet if len(i.union(j)) == length])
+    pass
 
 
 def getLargeItemset(data_iterator,minSupport):
