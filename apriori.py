@@ -4,17 +4,30 @@ from itertools import chain, combinations
 from collections import defaultdict
 from optparse import OptionParser
 
+class Itemset(object):
+    "for size >= 2"
+    def __init__(self,items):
+        self.items = items
+        self.support = 0
 """fast-join and anti-monotone strategy"""
 class HashTree(object):
     def __init__(self):
         self.leaf = []
         self.root = TreeNode()
+    def add(self,itemset):
+        node = self.root
+        for item in itemset.items:
+            if item in node.internalNode:
+                node = node.internalNode[item]
+            else:
+                n = TreeNode()
+                node.internalNode[item] = n
+                node = n
 
 class TreeNode(object):
     def __init__(self):
         self.internalNode = dict()
-        self.fp = dict()
-
+        #self.fp = dict()
 
 def subsets(arr):
     """ Returns non empty subsets of arr"""
@@ -41,16 +54,24 @@ def returnItemsWithMinSupport(itemSet, transactionList, minSupport, freqSet):
     return _itemSet
 
 
-def joinSet(itemSet,length):
+def joinSet(tree):
     """Join a set with itself and returns the n-element itemsets"""
-    pass
-
+    candidates = HashTree()
+    for leaf in tree.leaf:
+        for i in range(0,len(leaf)):
+            for j in range(i+1,len(leaf)):
+                if leaf[i][-1]>leaf[j][-1]:
+                    canndidates.add([for item in leaf[0:-1]]+leaf[j][-1]+leaf[i][-1])
+                else:
+                    candidates.add([for item in leaf[i:-1]]+leaf[i][-1]+leaf[j][-1])
+    return candidates
 
 def getLargeItemset(data_iterator,minSupport):
     _itemset = dict(int)
     for record in data_iterator:
         for item in record:
             _itemset[item] = _itemset[item]+1
+    """large 1-itemset"""
     itemset = dict(int)
     for key,value in _itemset.items():
         if value >= minSupport:
@@ -60,11 +81,10 @@ def getLargeItemset(data_iterator,minSupport):
 
 def runApriori(data_iter, minSupport, minConfidence):
     """the large-1 itemset and candidate-2 itemset"""
-    itemSet,candidate = getLargeItemset(data_iter)
+    currentLSet = getLargeItemset(data_iter)
     freqSet= defaultdict(int)
     largeSet= dict()
     assocRules= dict()
-    currentLSet	= oneCSet
     k = 2
     while(currentLSet != set([])):
         largeSet[k-1]= currentLSet
