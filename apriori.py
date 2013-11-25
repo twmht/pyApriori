@@ -1,96 +1,125 @@
 import sys
 
-from itertools import chain, combinations
+from itertools import  combinations
 from collections import defaultdict
 from optparse import OptionParser
 
 class Itemset(object):
-    "for size >= 2"
     def __init__(self,items):
         self.items = items
         self.support = 0
-"""fast-join and anti-monotone strategy"""
-class HashTree(object):
+
+class TreeNode(object):
     def __init__(self):
+        self.internalNode = dict()
+
+"""fast-join"""
+class PrefixTree(object):
+    def __init__(self):
+        self.root = dict()
         self.leaf = []
-        self.root = TreeNode()
     def add(self,itemset):
         node = self.root
-        for item in itemset.items:
+        for i in range(0,len(itemset.items)-1):
+            b = itemset.items[i]
+            if b in node.internalNode:
+                node = node.internalNode[b]
+            else:
+                n = TreeNode()
+                node.internalNode[b] = n
+                node = n
+        node.append(itemset)
+
+"""anti-monotone strategy"""
+class HashTree(object):
+    def __init__(self,fp = True):
+        self.leaf = []
+        self.root = TreeNode()
+        self.fp = fp;
+    def add(self,itemset):
+        if self.fp == True:
+            items = itemset.items[0:len(itemset.items)-1]
+        else:
+            items = itemset.items
+        node = self.root
+        for item in items:
             if item in node.internalNode:
                 node = node.internalNode[item]
             else:
                 n = TreeNode()
                 node.internalNode[item] = n
                 node = n
+        node.leaf.append(items)
+    def update(self,itemset):
+        node = self.root;
+        for item in itemset:
+            if item in node.internalNode:
+                node = node.internalNode
+            else:
+                return False
+        node.leaf[0] = node.leaf[0]+1
 
-class TreeNode(object):
-    def __init__(self):
-        self.internalNode = dict()
-        #self.fp = dict()
 
-def subsets(arr):
+
+def subsets(itemset,k):
     """ Returns non empty subsets of arr"""
-    return chain(*[combinations(arr,i + 1) for i,a in enumerate(arr)])
+    return combinations(itemset,k-1)
 
 
-def returnItemsWithMinSupport(itemSet, transactionList, minSupport, freqSet):
-    """calculates the support for items in the itemSet and returns a subset of the itemSet
-    each of whose elements satisfies the minimum support"""
-    _itemSet = set()
-    localSet = defaultdict(int)
-
-    for item in itemSet:
-        for transaction in transactionList:
-            if item.issubset(transaction):
-                freqSet[item] += 1
-                localSet[item]	+= 1
-
-    for item,count in localSet.items():
-        support = float(count)/len(transactionList)
-        if support >= minSupport:
-            _itemSet.add(item)
-
-    return _itemSet
+def antiMonotonePruning():
+    pass
+def returnItemsWithMinSupport(transactionList,freqSet, candidates, minSupport,k):
+    if k > 2:
+        antiMonotonePruning(freqSet,candidates,k)
+    newFreqSet = HashTree(fp = True)
+    for transaction in transactionList:
+        for subset in subsets(transaction,k+1):
+            candidates.update(subset)
 
 
-def joinSet(tree):
+def joinSet(tree,k):
     """Join a set with itself and returns the n-element itemsets"""
     candidates = HashTree()
     for leaf in tree.leaf:
         for i in range(0,len(leaf)):
             for j in range(i+1,len(leaf)):
                 if leaf[i][-1]>leaf[j][-1]:
-                    canndidates.add([for item in leaf[0:-1]]+leaf[j][-1]+leaf[i][-1])
+                    items = [item for item in leaf[i][0:k-1]]
+                    items.append(leaf[j][-1])
+                    items.append(leaf[i][-1])
                 else:
-                    candidates.add([for item in leaf[i:-1]]+leaf[i][-1]+leaf[j][-1])
+                    items = [item for item in leaf[i][0:k-1]]
+                    items.append(leaf[i][-1])
+                    items.append(leaf[j][-1])
     return candidates
 
-def getLargeItemset(data_iterator,minSupport):
-    _itemset = dict(int)
+
+def initial(data_iterator,minSupport):
+    """large 1-itemset and 2-candidates"""
+    itemset = dict(int)
     for record in data_iterator:
         for item in record:
-            _itemset[item] = _itemset[item]+1
-    """large 1-itemset"""
-    itemset = dict(int)
-    for key,value in _itemset.items():
+            itemset[item] = itemset[item]+1
+    largeset = []
+    for key,value in itemset.items():
         if value >= minSupport:
-            itemset[key] = value
-    return itemSet
+            largeset.append(key)
 
+    candidates = HashTree(fp = False)
+    for i in range(0,len(largeset)):
+        for j in range(i+1,len(largeset)):
+            candidates.add(Itemset([largeset[i],largeset[j]]))
+    return large,candidates
 
 def runApriori(data_iter, minSupport, minConfidence):
-    """the large-1 itemset and candidate-2 itemset"""
-    currentLSet = getLargeItemset(data_iter)
-    freqSet= defaultdict(int)
-    largeSet= dict()
+    """the large-1 itemset and candidates-2 itemset"""
+    currentLSet,currentCSet = initial(data_iter,minSuppor)
     assocRules= dict()
     k = 2
     while(currentLSet != set([])):
         largeSet[k-1]= currentLSet
-        currentLSet = joinSet(currentLSet,k)
-        currentCSet= returnItemsWithMinSupport(currentLSet, transactionList, minSupport, freqSet)
-        currentLSet= currentCSet
+        currentLSet= returnItemsWithMinSupport(currentLSet, currentCSet, minSupport)
+        currentCSet = joinSet(currentLSet)
         k = k + 1
 
     def getSupport(item):
