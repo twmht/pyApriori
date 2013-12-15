@@ -121,7 +121,7 @@ def firstPass():
             itemset[item] = itemset[item]+1
     largeSet = []
     for key,value in itemset.items():
-        if value >= minSupport:
+        if value/len(transactions) >= minSupport:
             largeSet.append(key)
     largeSet.sort()
     return largeSet
@@ -169,4 +169,4 @@ if __name__ == "__main__":
     minConfidence = options.minC
     runApriori()
 
-    printResults(items,rules)
+    #printResults(items,rules)
