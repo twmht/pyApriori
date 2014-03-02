@@ -4,7 +4,6 @@ import csv
 from itertools import  combinations
 from collections import defaultdict
 from optparse import OptionParser
-
 class Itemset(object):
     def __init__(self,items):
         self.items = items
@@ -23,7 +22,6 @@ class TreeNode(object):
 class HashTree(object):
     def __init__(self):
         self.root = TreeNode()
-        self.itemset = None
         """how many leaf nodes"""
         self.leaf = []
         self.length = 0
