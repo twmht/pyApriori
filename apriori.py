@@ -91,6 +91,12 @@ class HashTree(object):
             else:
                 return False
         return node.itemset
+    def returnSupport(self,items):
+        node = self.root
+        for item in items:
+            if item in node.internalNode:
+                node = node.internalNode[item]
+        return node.itemset.support
 
 
 def antiMonotonePruning(itemset,a,b,freqSet):
@@ -141,7 +147,7 @@ def firstPass():
     largeSet = defaultdict(int)
     for key,value in itemset.items():
         if value >= int(minSupport*len(transactions)):
-            largeSet[key] = value
+            largeSet[key] = [value,True]
     return largeSet
 
 def findMaximal(currentLSet,lastLSet):
@@ -149,7 +155,10 @@ def findMaximal(currentLSet,lastLSet):
         for itemset in currentLSet.itemsets:
             a = itemset[0]
             b = itemset[1]
-
+            if a in lastLSet:
+                lastLSet[a][1] = False
+            if b in lastLSet:
+                lastLSet[a][1] = False
     else:
         for items in currentLSet.itemsets:
             for c in combinations(items,lastLSet.length):
@@ -168,8 +177,7 @@ def runApriori():
         freqDict[k-1]= currentLSet
         currentCSet = joinSet(currentLSet,k)
         currentLSet= returnItemsWithMinSupport(currentCSet,k)
-        if k >= 3:
-            findMaximal(currentLSet,freqDict[k-1])
+        findMaximal(currentLSet,freqDict[k-1])
         k = k + 1
 
 def readCVSfile(infile):
@@ -185,11 +193,33 @@ def readGoods(infile):
         goods[int(good[0])] = good[1].replace("'","") +' ' + good[2].replace("'","")
 
 def printRules():
-    pass
+    global freqDict,goods,transactions,minConfidence
+    for length,tree in freqDict.iteritems():
+        if length >= 2:
+            """determine the tree to check the support of the left side"""
+            leftSupportTree = freqDict[length-1]
+            totalSupportTree = freqDict[length]
+            for itemset in tree.itemsets:
+                if itemset.maximal == True:
+                    items = itemset.items
+                    for c in combinations(items,length-1):
+                        if isinstance(leftSupportTree,dict):
+                            leftSupport = leftSupportTree[c[0]][0]
+                        else:
+                            leftSupport = leftSupportTree.returnSupport(c)
+                        totalSupport = totalSupportTree.returnSupport(items)
+                        confidence = float(totalSupport)/leftSupport
+                        if confidence >= minConfidence:
+                            right = set(items).difference(set(c))
+                            left = ', '.join(goods[item] for item in c)
+                            print left,'\t--> ',goods[next(iter(right))],"[ confidence = ",round(confidence,2),"]"
 
 def printFrequentItemsets():
     global freqDict,goods,transactions
     for key,value in freqDict.iteritems():
+        if key == 1:
+            for item,value in value.iteritems():
+                print goods[item],float(value[0])/len(transactions)
         if key >= 2:
             for itemset in value.itemsets:
                 if itemset.maximal == True:
@@ -207,7 +237,7 @@ if __name__ == "__main__":
     optparser.add_option('-i', '--inputDatabase', dest = 'input', help = 'the filename which contains the comma separated values',default = None)
     optparser.add_option('-g', '--goods', dest = 'good', help = 'the file specifying the goods',default = None)
     optparser.add_option('-s', '--minSupport', dest='minS', help = 'minimum support value(default=0.15)', default=0.03, type='float')
-    optparser.add_option('-c','--minConfidence', dest='minC', help = 'minimum confidence value(default = 0.6)', default = 0.6, type='float')
+    optparser.add_option('-c','--minConfidence', dest='minC', help = 'minimum confidence value(default = 0.6)', default = 0.5, type='float')
 
     (options, args) = optparser.parse_args()
 
@@ -224,3 +254,4 @@ if __name__ == "__main__":
     minConfidence = options.minC
     runApriori()
     printFrequentItemsets()
+    printRules()
