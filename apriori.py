@@ -212,7 +212,7 @@ def printRules():
                         if confidence >= minConfidence:
                             right = set(items).difference(set(c))
                             left = ', '.join(goods[item] for item in c)
-                            print left,'\t--> ',goods[next(iter(right))],"[ confidence = ",round(confidence,2),"]"
+                            print left,'-->',goods[next(iter(right))],"[ confidence = ",round(confidence,2),"]"
 
 def printFrequentItemsets():
     global freqDict,goods,transactions
@@ -249,9 +249,12 @@ if __name__ == "__main__":
 
     if options.good is not None:
         readGoods(csv.reader(open(options.good,'r')))
+    else:
+        print 'No goods name specified, system with exit\n'
+        sys.exit('System will exit')
 
     minSupport = options.minS
     minConfidence = options.minC
     runApriori()
-    printFrequentItemsets()
+    #printFrequentItemsets()
     printRules()
